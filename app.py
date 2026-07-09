@@ -1,72 +1,65 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
-plt.rcParams["font.sans-serif"] = ["WenQuanYi Zen Hei"]
-plt.rcParams["axes.unicode_minus"] = False
 
-# 你的实验原始数据集
-dataset = [
-    [25, 5, 0, 30, 0.1, 0, 2.40, 5.50, 1.100, 45.00, 0],
-    [30, 0, 0, 30, 0.1, 0, 2.42, 4.57, 1.241, 40.82, 0],
-    [25, 0, 8, 25, 0.1, 0.05, 2.40, 4.82, 1.1763, 37.70, 0],
-    [25, 5, 0, 30, 0, 0, 0.233, 4.873, 1.1107, 8.89, 1],
-    [25, 5, 0, 30, 0, 0, 2.65, 6.03, 1.134, 40.00, 0]
-]
+# -------------------------- 页面设置 --------------------------
+st.set_page_config(page_title="APAP Individualized Dosage Assistant", layout="centered")
+st.title("💊 Acetaminophen Individualized Dosage Assistant")
+st.subheader("A Simple Tool to Help Calculate Safe and Effective Dosing")
 
-feature_names = ["丙二醇_mL", "甘油_mL", "PEG400_mL", "蔗糖_g", "桔子香精_g", "依地酸二钠_g"]
-target_reg = ["主药含量(g/100mL)", "pH值", "相对密度", "黏度(mPa·s)"]
-df = pd.DataFrame(dataset, columns=feature_names + target_reg + ["低温析出标签"])
+# -------------------------- 输入模块 --------------------------
+st.markdown("### 🧑‍⚕️ Patient Information Input")
 
-X_raw = df[feature_names].values
-y_content = df["主药含量(g/100mL)"].values
-y_ph = df["pH值"].values
-y_density = df["相对密度"].values
-y_viscosity = df["黏度(mPa·s)"].values
-y_precip = df["低温析出标签"].values
-
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X_raw)
-
-# 训练AI预测模型
-model_content = RandomForestRegressor(n_estimators=35, max_depth=4, random_state=2026)
-model_ph = RandomForestRegressor(n_estimators=35, max_depth=4, random_state=2026)
-model_density = RandomForestRegressor(n_estimators=35, max_depth=4, random_state=2026)
-model_vis = RandomForestRegressor(n_estimators=35, max_depth=4, random_state=2026)
-model_stability = RandomForestClassifier(n_estimators=35, max_depth=4, random_state=2026)
-
-model_content.fit(X_scaled, y_content)
-model_ph.fit(X_scaled, y_ph)
-model_density.fit(X_scaled, y_density)
-model_vis.fit(X_scaled, y_viscosity)
-model_stability.fit(X_scaled, y_precip)
-
-# 移动端适配网页界面
-st.set_page_config(page_title="对乙酰氨基酚口服液AI预测模型", layout="centered")
-st.title("💊 口服液处方AI预测系统")
-st.subheader("基于实验处方数据预测含量、pH、黏度与低温稳定性")
-
-st.markdown("### 输入每100mL处方辅料用量")
 col1, col2 = st.columns(2)
 with col1:
-    propylene_glycol = st.number_input("丙二醇(mL)", min_value=0.0, max_value=50.0, value=25.0, step=0.5)
-    glycerin = st.number_input("甘油(mL)", min_value=0.0, max_value=20.0, value=5.0, step=0.2)
-    peg400 = st.number_input("PEG400(mL)", min_value=0.0, max_value=15.0, value=0.0, step=0.2)
+    age = st.number_input("Age (years)", min_value=0, max_value=120, value=25, step=1)
+    weight = st.number_input("Weight (kg)", min_value=1.0, max_value=200.0, value=60.0, step=0.5)
 with col2:
-    sucrose = st.number_input("蔗糖(g)", min_value=0.0, max_value=50.0, value=30.0, step=1.0)
-    orange_flavor = st.number_input("桔子香精(g)", min_value=0.0, max_value=0.5, value=0.1, step=0.01)
-    edta_disodium = st.nuimport matplotlib.pyplot as plt
+    indication = st.selectbox("Indication", ["Fever", "Mild Pain", "Moderate Pain"])
+    liver_impairment = st.selectbox("Liver Function", ["Normal", "Impaired"])
 
-fig, ax = plt.subplots(figsize=(10,6)) # 适度加宽画布，横向容纳更多横坐标文字
-# 绘制折线
-ax.plot(x_labels, weights, marker='o', linewidth=2.5, color='#2878cb')
-ax.set_title("辅料影响权重分析", fontsize=20, pad=20)
-# 横轴标签优化
-plt.xticks(rotation=40, ha='right', fontsize=11)
-# 预留底部空白
-plt.subplots_adjust(bottom=0.24)
-# streamlit渲染图片
-st.pyplot(fig)
+# -------------------------- 计算模块 --------------------------
+def calculate_dosage(age, weight, indication, liver_impairment):
+    # 基础剂量：10-15 mg/kg/次，最大 1g/次，4g/天
+    base_dose_mg_per_kg = 12
+    if indication == "Fever":
+        base_dose_mg_per_kg = 10
+    elif indication == "Moderate Pain":
+        base_dose_mg_per_kg = 15
 
+    single_dose_mg = base_dose_mg_per_kg * weight
+    max_single_dose_mg = 1000
+    max_daily_dose_mg = 4000
+
+    if liver_impairment == "Impaired":
+        single_dose_mg *= 0.5
+        max_daily_dose_mg = 2000
+
+    single_dose_mg = round(min(single_dose_mg, max_single_dose_mg), 0)
+    daily_dose_mg = round(min(single_dose_mg * 4, max_daily_dose_mg), 0)
+
+    return {
+        "Single Dose (mg)": single_dose_mg,
+        "Max Daily Dose (mg)": daily_dose_mg,
+        "Dosing Interval": "Every 4–6 hours, not exceeding 4 times daily"
+    }
+
+# -------------------------- 输出模块 --------------------------
+if st.button("Calculate Recommended Dosage", use_container_width=True):
+    result = calculate_dosage(age, weight, indication, liver_impairment)
+    st.divider()
+    st.markdown("## 📋 Recommended Dosage Summary")
+    df_result = pd.DataFrame(list(result.items()), columns=["Parameter", "Recommendation"])
+    st.dataframe(df_result, use_container_width=True, hide_index=True)
+
+    st.markdown("### ⚠️ Important Safety Notes")
+    st.info(
+        "This tool is for educational purposes only. "
+        "All dosing decisions must be confirmed by a healthcare professional. "
+        "Do not exceed the maximum daily dose to avoid liver toxicity."
+    )
+
+st.divider()
+st.caption(
+    "Note: This system is a simplified auxiliary tool based on general dosing guidelines. "
+    "It does not account for all individual factors. Always consult a physician or pharmacist."
+)
