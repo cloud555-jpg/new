@@ -57,35 +57,16 @@ with col1:
 with col2:
     sucrose = st.number_input("蔗糖(g)", min_value=0.0, max_value=50.0, value=30.0, step=1.0)
     orange_flavor = st.number_input("桔子香精(g)", min_value=0.0, max_value=0.5, value=0.1, step=0.01)
-    edta_disodium = st.number_input("依地酸二钠(g)", min_value=0.0, max_value=0.1, value=0.0, step=0.01)
+    edta_disodium = st.nuimport matplotlib.pyplot as plt
 
-input_data = np.array([[propylene_glycol, glycerin, peg400, sucrose, orange_flavor, edta_disodium]])
-input_processed = scaler.transform(input_data)
+fig, ax = plt.subplots(figsize=(10,6)) # 适度加宽画布，横向容纳更多横坐标文字
+# 绘制折线
+ax.plot(x_labels, weights, marker='o', linewidth=2.5, color='#2878cb')
+ax.set_title("辅料影响权重分析", fontsize=20, pad=20)
+# 横轴标签优化
+plt.xticks(rotation=40, ha='right', fontsize=11)
+# 预留底部空白
+plt.subplots_adjust(bottom=0.24)
+# streamlit渲染图片
+st.pyplot(fig)
 
-run_predict = st.button("一键运行AI预测", use_container_width=True)
-if run_predict:
-    pred_content = round(model_content.predict(input_processed)[0], 3)
-    pred_ph = round(model_ph.predict(input_processed)[0], 2)
-    pred_rd = round(model_density.predict(input_processed)[0], 4)
-    pred_vis = round(model_vis.predict(input_processed)[0], 2)
-    precip_prob = model_stability.predict_proba(input_processed)[0][1]
-    stability_result = "微量析出，低温稳定性较差" if precip_prob > 0.5 else "无析出，低温稳定性合格"
-
-    st.divider()
-    st.markdown("## 📈 AI模型预测结果")
-    result_table = pd.DataFrame({
-        "检测项目": ["主药含量(g/100mL)", "pH", "相对密度", "黏度(mPa·s)", "低温储存表现"],
-        "预测结果": [pred_content, pred_ph, pred_rd, pred_vis, stability_result]
-    })
-    st.dataframe(result_table, use_container_width=True, hide_index=True)
-
-    st.divider()
-    st.markdown("## 📊 辅料影响权重分析")
-    feature_importance = model_content.feature_importances_
-    fig, ax = plt.subplots(figsize=(8,3.5))
-    ax.bar(feature_names, feature_importance)
-    plt.xticks(rotation=35, fontsize=9)
-    plt.tight_layout()
-    st.pyplot(fig)
-
-st.caption("备注：模型由本次5组实验室处方数据训练生成，仅用作处方筛选参考，正式制剂仍需实验验证")
